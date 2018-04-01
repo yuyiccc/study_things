@@ -32,3 +32,16 @@ Roi-Align 方法则没有这两次量化过程。解决第一次量化的方法�
 ![](/pic/bilinear_interpolation.png)
 
 ## 模型框架
+在faster-rcnn的基础上，将Roipooling改为了Roi-Align，并加上了一支预测mask的分支。网路结构如下图：
+
+![](/pic/network.png)
+
+每一个ROI都会预测N个mask，这个N为类别数，根据类别来决定用哪一个mask。论文中解释这样可以分离分类和mask预测两个任务。这里只解释mask预测的训练和预测。
+- 训练
+训练标签的制作：loss只计算正样本的ROI，标签为ROI区域和mask的交集。
+- 测试
+测试时只选取NMS后前景分类分数前100的ROI来进行mask任务。根据cls任务来选择一个对应的mask，将mask resize到ROI大小，然后卡0.5的阈值变为0-1mask。
+
+## 结论
+- 1. roi-Align相比于Roipooling而言对性能有较大的提升。
+- 2. 加了mask这一支预测之后，对detection任务的性能也有提升
