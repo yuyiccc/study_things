@@ -1,5 +1,5 @@
 * [1.GAN](#1)
-* [1.DC-GAN](#2)
+* [2.DC-GAN](#2)
 
 
 <h2 id="1">1.GAN</h2>
@@ -42,7 +42,7 @@ D希望可以判断出G生成的数据不符合训练集的分布。这样最后
 ![](/pic/GAN_algo.png)
 
 -----
-<h2 id="2">1.DC-GAN</h2>
+<h2 id="2">2.DC-GAN</h2>
 
 - [论文地址](https://arxiv.org/pdf/1511.06434.pdf)
 
