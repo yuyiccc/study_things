@@ -2,6 +2,8 @@
 * [2.DC-GAN](#2)
 * [3.W-GAN](#3)
 * [4.pix2pix](#4)
+* [5.cycle-GAN](#5)
+
 
 <h2 id="1">1.GAN</h2>
 
@@ -161,6 +163,62 @@ wasserstein距离可以很好的刻画两个分布之间的距离，即使两个
 真实图像和生成图像之间pix的L1 loss。我们知道L1和L2范数loss产生的图像通常是模糊的，也就说它们可以抓住图像低频的
 信息，而一些高频的信息比如边界，角点就很难捕捉到。所以在loss中加入L1范数模型在低频的方面做得更好。而为了使得判别器
 在建模高频信息时表现更好，这里用到了patchGAN。
+
+
+-------
+<h2 id="5">5.cycle-GAN</h2>
+
+- [论文地址](https://arxiv.org/pdf/1611.07004.pdf)
+
+-------
+
+### 总结
+cycle-GAN是针对不匹配图片数据集之间的转换提出的。模型的输入有两个数据集X,Y。模型中包含两个生成器和两个判别器，生成器G是将图片数据集X中的图片转换到
+图片数据集Y中，判别器D_Y则是判别生成的Y图像和真实的Y图像是否相似。生成器F则是将Y数据集里的图像转换到X数据集中，判别器D_X则是判别生成器F生成的图像和X
+数据集中的真实图像是否相似。loss方面，除了adversarial loss之外，还有一个cycle consistency loss,这个loss是用来衡量经过生成器G,F循环重构出来的图像和真实图像的L1距离。
+
+### 论文细节
+
+- 生成器和判别器的架构：
+
+![](/pic/cycle_network.png)
+
+-  生成器：
+
+生成器的网络架构可分为3个部分：1.降维编码：可以理解为提取源图像的特征。2.转换：可以理解为将源图像的特征转换到目标图像的特征。
+3.升维解码：可以理解为将目标图像的特征解码为图像。降维是直接用卷积而没用池化，升维解码的最后一层用到的激活函数为tanh，这是
+为了将输出信号转化到【-1，1】，再通过一个转化可以到【0，255】。在图像预处理阶段将图像转化到【-1，1】。
+
+- 判别器：
+
+判别器沿用DC-GAN的设计思想，用卷积来downsample。而且不会downsample到1 * 1，而是downsample到 16 * 16.这样可以稳定训练。最后一层卷积层不用
+激活函数，标签为0，1，直接算最小二乘loss。这个ls-GAN提出的loss。也是可以解决原始GAN的一些问题。
+
+- 整体的loss：
+
+![](/pic/cycle_loss.png)
+
+可以看到，整体的loss分为两个部分，一个是adversarial loss，一个是cycle consistency loss.判别器的loss中只有adversarial loss。生成器的loss
+有这两个loss。
+
+- cycle consistency loss
+
+![](/pic/cycle_consistency_loss.png)
+
+ 可以看出是一个重构的loss，意思就是重构出来的图像要和源图像竟可能的接近。
+ 
+- adversarial loss
+
+![](/pic/cycle_ad_loss.png)
+
+这里用的就是原始GAN论文中的loss。而实际中可以换成ls-gan，w-gan中的loss来稳定训练过程。
+
+
+
+
+
+
+
 
 
 
