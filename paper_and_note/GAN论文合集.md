@@ -3,7 +3,7 @@
 * [3.W-GAN](#3)
 * [4.pix2pix](#4)
 * [5.cycle-GAN](#5)
-
+* [6.star-GAN](#6)
 
 <h2 id="1">1.GAN</h2>
 
@@ -213,13 +213,56 @@ cycle-GAN是针对不匹配图片数据集之间的转换提出的。模型的�
 
 这里用的就是原始GAN论文中的loss。而实际中可以换成ls-gan，w-gan中的loss来稳定训练过程。
 
+-------
+<h2 id="5">5.cycle-GAN</h2>
+
+- [论文地址](https://arxiv.org/pdf/1711.09020.pdf)
+
+-------
+### 总结
+star-gan是针对多源图像转换提出来的一个模型，前面讲的cycle-gan只能进行两个数据集的相互转换，如果要做多源图像数据之间的转换将非常的困难。star-gan在这里只用到了一个生成器G和一个判别器D，生成器的输入有图像X和需要转换到的域的标签c，而判别器不仅仅需要判别图像的真假，还需要判别图像的类别。所以，对于G而言，loss分为三个部分。1.adver_loss 2.class_loss 3.reconstract_loss 。而D的loss分为两个部分:1.adver_loss 2. class_loss 。
+
+### 论文细节
+
+- 生成器和判别器的架构：
+
+![](/pic/star-gan-network.png)
+
+-  生成器：
+
+生成器的网络架构可分为3个部分：1.降维编码：可以理解为提取源图像的特征。2.转换：可以理解为将源图像的特征转换到目标图像的特征。
+3.升维解码：可以理解为将目标图像的特征解码为图像。降维是直接用卷积而没用池化，升维解码的最后一层用到的激活函数为tanh，这是
+为了将输出信号转化到【-1，1】，再通过一个转化可以到【0，255】。在图像预处理阶段将图像转化到【-1，1】。
+![](/pic/star-gan.png)
+
+- 判别器：
+
+判别器沿用DC-GAN的设计思想，用卷积来downsample。而且不会downsample到1 * 1，而是downsample到 16 * 16.这样可以稳定训练。最后一层由两个卷积操作得到两个输出，分别为判断真假的输出和判断类别的输出。
+![](/pic/star-gan-D.png)
+
+- 整体的loss：
+
+![](/pic/star-gan-total_loss.png)
 
 
 
+- reconstruction loss
 
+![](/pic/star-gan-recon-loss.png)
 
+ 可以看出是一个重构的loss，先加条件c将图像转化到c域上，在加条件c'将图像转回来，这样重构出的图像要求与原图像的差别越小越好。
+ 
+- classification loss
 
+![](/pic/star-gan-fake-class-loss.png)
 
+由G产生的图像需要让D认为它的类别为c
 
+![](/pic/star-gan-real-class-loss.png)
 
+D判别真实图像的类别的losss
+
+- adversarial loss
+
+![](/pic/star-gan-adver-loss.png)
 
