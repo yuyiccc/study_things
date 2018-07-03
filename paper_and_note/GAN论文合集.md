@@ -214,7 +214,7 @@ cycle-GAN是针对不匹配图片数据集之间的转换提出的。模型的�
 这里用的就是原始GAN论文中的loss。而实际中可以换成ls-gan，w-gan中的loss来稳定训练过程。
 
 -------
-<h2 id="5">5.cycle-GAN</h2>
+<h2 id="6">6.star-GAN</h2>
 
 - [论文地址](https://arxiv.org/pdf/1711.09020.pdf)
 
@@ -266,3 +266,4 @@ D判别真实图像的类别的losss
 
 ![](/pic/star-gan-adver-loss.png)
 
+这里adversarial loss可以采用不同的loss来训练。
