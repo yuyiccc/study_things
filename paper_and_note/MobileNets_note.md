@@ -2,7 +2,7 @@
 
 MobileNet是针对网络压缩提出来的，是希望将网络的参数和计算量都减少。在此基础上性能不会有太多的下降。
 提出的方法是将传统的卷积操作进行分解。分解为两步：1.depthwise convolution(对feature map进行逐层的卷积) 
-2.pointwise convolution(用N个1*1*M的卷积对第一步得到的feature map进行卷积得到N个feature map)
+2.pointwise convolution(用N个1✖️1✖️M的卷积对第一步得到的feature map进行卷积得到N个feature map)
 
 ![](/pic/mobilenet.png)
 
