@@ -13,3 +13,6 @@
 
 ### 结合挂起程序到后台运行和输出重定向
 - 例子：nohup python a.py > out.log 2>&1 &
+
+### 文件的批处理
+[很好的一个博客](https://www.cnblogs.com/aaronax/p/5618024.html)
