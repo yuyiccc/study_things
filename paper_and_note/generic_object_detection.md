@@ -43,6 +43,10 @@
 ## data argumentation：
   这里的数据增广主要针对解决物体scale的问题，下表为几种针对性的方法：
   
+  [SNIP](http://openaccess.thecvf.com/content_cvpr_2018/papers/Singh_An_Analysis_of_CVPR_2018_paper.pdf)
+  
+  [SNIPER](http://papers.nips.cc/paper/8143-sniper-efficient-multi-scale-training.pdf)
+  
   ![](/pic/detect_5.png)
   
 
