@@ -16,11 +16,33 @@
   直觉上来说，我们需要根据物体的大小来使用特征，对于小物体我们可能要用底层的特征，因为它们具有更高的分辨率和更细节的几何信息。
   
   这里有几种方式来利用不同层的特征：
+  
     - 单纯的用不同层的特征来进行检测。
     - 融合不同层的特征形成单一的特征层。
     - 融合不同层的特征，形成多层融合特征。
-  如SSD就是第一种方式，FPN、RefineDet就是第三种方式。
+    
+  如SSD就是第一种方式，FPN、RefineDet就是第三种方式。下图中是一些有代表性的特征融合的方法：
+  
+  [RefineDet cvpr2018](http://openaccess.thecvf.com/content_cvpr_2018/papers/Zhang_Single-Shot_Refinement_Neural_CVPR_2018_paper.pdf)
+  
   ![](/pic/detect_2.png)
   
-  3. 背景信息的建模：
-  背景信息一般可分为全局的和局部的信息，全局信息可以提供一些场景的信息，局部可以提供物体周围的细节信息。
+## 背景信息的建模：
+  背景信息一般可分为全局的和局部的信息，全局信息可以提供一些图片级别、场景级别的信息，比如在室内的情况下出现船的概率会很低，在海滩的情况下出现船的概率就会提高。局部可以提供周围物体的关系信息，比如人和人站在一起，人在开车等等。一些方法如下表：
+  ![](/pic/detect_3.png)
+  
+  
+  局部背景信息的整合更多的是扩大检测框来提取更多的周围信息：
+  
+  [Relation Networks for Object Detection, ORN cvpr2018](http://openaccess.thecvf.com/content_cvpr_2018/papers/Hu_Relation_Networks_for_CVPR_2018_paper.pdf)
+  
+  [CoupleNet iccv2017](http://openaccess.thecvf.com/content_ICCV_2017/papers/Zhu_CoupleNet_Coupling_Global_ICCV_2017_paper.pdf)
+  
+  ![](/pic/detect_4.png)
+  
+## data argumentation：
+  这里的数据增广主要针对解决物体scale的问题，下表为几种针对性的方法：
+  
+  ![](/pic/detect_5.png)
+  
+
