@@ -24,7 +24,8 @@
   如SSD就是第一种方式，FPN、RefineDet就是第三种方式。下图中是一些有代表性的特征融合的方法：
   
   [RefineDet cvpr2018](http://openaccess.thecvf.com/content_cvpr_2018/papers/Zhang_Single-Shot_Refinement_Neural_CVPR_2018_paper.pdf)
-  <span id="jump">Hello World</span>
+ 
+  [RefineDet_总结](#jump_1)
   
   ![](/pic/detect_2.png)
   
@@ -51,4 +52,26 @@
   ![](/pic/detect_5.png)
   
 
-[XXXX](#jump)
+***
+## 文章总结
+
+<h2 id="jump_1">RefineDet 总结</h2>
+
+### 整体框架
+
+  这个研究主要是提出了一种介于‘一步’和‘两步’detector的一种新的检测器，目的是为了综合两种方法的优势，避免两种方法的短处。‘一步’方法，如yolo系列，SSD系列等的优点在于结构简单，速度快，缺点是精度不如‘两步’方法高。‘两步’方法，如faster-rcnn架构，优点是精度高尤其是定位，这是因为经过了两次的回归操作来调整框的位置，缺点是速度慢。作者结合这两种方法提出的架构图如下：
+
+   ![](/pic/refinedet_1.png)
+
+  其实可以把这个框架理解为两步‘一步’方法，即‘一步’方法做了两次。这个框架主要由三部分组成：Anchor Refinement Module（ARM）、Transfer Connection Block（TCB）、Object Detection Module（ODM）。其中ARM、ODM就是两次‘一步’方法,ARM中的分类是二分类即背景或者前景，ODM就是纯粹的SSD，而TCB可以理解为FPN，只不过向后传递的BLOCK的方法不同。下图就是TCB的结构：
+
+  ![](/pic/refinedet_2.png)
+
+### 细节部分
+  ‘一步’方法精度低的一个主要原因是类别不均衡问题，比如负样本会domain loss，所以文中用到了几个方法来抑制这种情况的出现：
+
+    - hard negative mining： 在匹配完之后，有很多的anchor的标签会使背景，那么这就会造成前景-背景的不平衡，所以在这里用到这种方法。具体的就是选择loss value大的 negative 样本使得negative：positive的比例不超过3:1。这个方法在ARM和ODM的loss中都会用到
+    - 对于ODM而言还会将ARM预测的negative value超过阈值（0.99）的anchor排除掉，这是排除一些一定是背景的anchor。
+  
+  anchor的设计和匹配：这里用到的feature map的stride分别为8、16、32、64，而对应的anchor大小就是stride的4倍，有三个ratio分别是0.5、1、2。匹配方法是：1.与GT框最大iou的anchor标定为positive，2.与任意GT框的iou大于0.5的anchor标定为positive。第一条保证了每个GT框会有anchor与之匹配。
+  
