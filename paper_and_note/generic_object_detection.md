@@ -70,8 +70,111 @@
 ### 细节部分
   ‘一步’方法精度低的一个主要原因是类别不均衡问题，比如负样本会domain loss，所以文中用到了几个方法来抑制这种情况的出现：
 
-    - hard negative mining： 在匹配完之后，有很多的anchor的标签会使背景，那么这就会造成前景-背景的不平衡，所以在这里用到这种方法。具体的就是选择loss value大的 negative 样本使得negative：positive的比例不超过3:1。这个方法在ARM和ODM的loss中都会用到
+    - hard negative mining： 在匹配完之后，有很多的anchor的标签会使背景，那么这就会造成前景-背景的不平衡，所以在这里用到这种方法。
+    具体的就是选择loss value大的 negative 样本使得negative：positive的比例不超过3:1。这个方法在ARM和ODM的loss中都会用到
     - 对于ODM而言还会将ARM预测的negative value超过阈值（0.99）的anchor排除掉，这是排除一些一定是背景的anchor。
   
   anchor的设计和匹配：这里用到的feature map的stride分别为8、16、32、64，而对应的anchor大小就是stride的4倍，有三个ratio分别是0.5、1、2。匹配方法是：1.与GT框最大iou的anchor标定为positive，2.与任意GT框的iou大于0.5的anchor标定为positive。第一条保证了每个GT框会有anchor与之匹配。
   
+由于本文的loss和SSD很想，且matching method、hard negative mining方法与SSD一样，所以在这里展示SSD的这三部分代码：
+  
+  - matching method方法，代码的方法不完全对，它不能完全满足第一条，也就是说有的GT框可能没有anchor来匹配。
+  ```python
+      # 这里i是GT框的index，也就是对GT框继续循环
+      # Jaccard score.先算所有anchor与一个GT框的IOU
+      label = labels[i]
+      bbox = bboxes[i]
+      jaccard = jaccard_with_anchors(bbox)
+      # GT-i框与某个anchor的IOU大于之前GT的IOU的话就更新这个anchor所对应的GT框
+      # Mask: check threshold + scores + no annotations + num_classes.
+      mask = tf.greater(jaccard, feat_scores)
+      # mask = tf.logical_and(mask, tf.greater(jaccard, matching_threshold))
+      mask = tf.logical_and(mask, feat_scores > -0.5)
+      mask = tf.logical_and(mask, label < num_classes)
+      imask = tf.cast(mask, tf.int64)
+      fmask = tf.cast(mask, dtype)
+      # Update values using mask.
+      feat_labels = imask * label + (1 - imask) * feat_labels
+      feat_scores = tf.where(mask, jaccard, feat_scores)
+
+      feat_ymin = fmask * bbox[0] + (1 - fmask) * feat_ymin
+      feat_xmin = fmask * bbox[1] + (1 - fmask) * feat_xmin
+      feat_ymax = fmask * bbox[2] + (1 - fmask) * feat_ymax
+      feat_xmax = fmask * bbox[3] + (1 - fmask) * feat_xmax
+      
+      # 这部分是对所有GT框进行循环
+      i = 0
+      [i, feat_labels, feat_scores,
+      feat_ymin, feat_xmin,
+      feat_ymax, feat_xmax] = tf.while_loop(condition, body,
+                                            [i, feat_labels, feat_scores,
+                                              feat_ymin, feat_xmin,
+                                              feat_ymax, feat_xmax])
+      # Transform to center / size. 转换
+      feat_cy = (feat_ymax + feat_ymin) / 2.
+      feat_cx = (feat_xmax + feat_xmin) / 2.
+      feat_h = feat_ymax - feat_ymin
+      feat_w = feat_xmax - feat_xmin
+      # Encode features. 编码
+      feat_cy = (feat_cy - yref) / href / prior_scaling[0]
+      feat_cx = (feat_cx - xref) / wref / prior_scaling[1]
+      feat_h = tf.log(feat_h / href) / prior_scaling[2]
+      feat_w = tf.log(feat_w / wref) / prior_scaling[3]
+      # Use SSD ordering: x / y / w / h instead of ours. anchor对应的坐标标签
+      feat_localizations = tf.stack([feat_cx, feat_cy, feat_w, feat_h], axis=-1)
+      # cls标签，loca标签，anchor与所有GT最大的IOU（shape与anchor相同）。
+      return feat_labels, feat_localizations, feat_scores
+      
+      # Compute positive matching mask...
+      # 这里利用上述IOU结果，就可得出匹配结果。当然这里有缺陷，匹配的第一条有时不能满足。
+      pmask = gscores > match_threshold
+      fpmask = tf.cast(pmask, dtype)
+      n_positives = tf.reduce_sum(fpmask)     
+  ```
+  - hard negative mining 方法
+  ```python
+    # Hard negative mining...
+    no_classes = tf.cast(pmask, tf.int32)
+    predictions = slim.softmax(logits)
+    nmask = tf.logical_and(tf.logical_not(pmask),
+                           gscores > -0.5)
+    fnmask = tf.cast(nmask, dtype)
+    nvalues = tf.where(nmask,
+                       predictions[:, 0],
+                       1. - fnmask)
+    nvalues_flat = tf.reshape(nvalues, [-1])
+    # Number of negative entries to select.
+    max_neg_entries = tf.cast(tf.reduce_sum(fnmask), tf.int32)
+    n_neg = tf.cast(negative_ratio * n_positives, tf.int32) + batch_size
+    n_neg = tf.minimum(n_neg, max_neg_entries)
+
+    val, idxes = tf.nn.top_k(-nvalues_flat, k=n_neg)
+    max_hard_pred = -val[-1] # negative prediction 的阈值
+    # Final negative mask.
+    #小于上述阈值就表明model认为不是negative但是它确实是negative，所以是hard negative
+    nmask = tf.logical_and(nmask, nvalues < max_hard_pred) 
+    fnmask = tf.cast(nmask, dtype)
+  ```
+  - loss方法
+  ```python
+    # Add cross-entropy loss.
+    with tf.name_scope('cross_entropy_pos'):
+        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits,
+                                                              labels=gclasses)
+        loss = tf.div(tf.reduce_sum(loss * fpmask), batch_size, name='value')
+        tf.losses.add_loss(loss)
+
+    with tf.name_scope('cross_entropy_neg'):
+        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits,
+                                                              labels=no_classes)
+        loss = tf.div(tf.reduce_sum(loss * fnmask), batch_size, name='value')
+        tf.losses.add_loss(loss)
+
+    # Add localization loss: smooth L1, L2, ...
+    with tf.name_scope('localization'):
+        # Weights Tensor: positive mask + random negative.
+        weights = tf.expand_dims(alpha * fpmask, axis=-1)
+        loss = custom_layers.abs_smooth(localisations - glocalisations)
+        loss = tf.div(tf.reduce_sum(loss * weights), batch_size, name='value')
+        tf.losses.add_loss(loss)
+  ```
